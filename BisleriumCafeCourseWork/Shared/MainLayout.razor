@@ -1,0 +1,58 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager NavManager
+
+
+<div class="page">
+    
+    @if (_globalState.CurrentUser != null)
+    {
+        <CascadingValue Value="@_globalState">
+
+            <div class="sidebar">
+                <NavMenu Username="@_globalState.CurrentUser.Username" UserRole="@_globalState.CurrentUser.Role" LogoutHandler="LogoutHandler" />
+            </div>
+        </CascadingValue>
+
+    }
+    <main>
+        <div class="">
+            @if (_globalState.CurrentUser != null)
+            {
+                <div class="coffee-bg p-2">
+                    <div class="d-flex justify-content-end align-items-center">
+                        <div>
+                            <strong>
+                                <i class="bi bi-person-circle pe-1"></i>
+                                @_globalState.CurrentUser.Username</strong>
+
+                        </div>
+                        <div class="ps-1">
+                            <strong>@_globalState.CurrentUser.Role</strong>
+
+                        </div>
+                    </div>
+                </div>
+            }
+            <CascadingValue Value="@_globalState">
+
+                @Body
+
+            </CascadingValue>
+        </div>
+    </main>
+</div>
+
+@code {
+    private GlobalState _globalState = new();
+
+    protected override void OnInitialized()
+    {
+        UserService.SeedUser();
+    }
+
+    private void LogoutHandler()
+    {
+        _globalState.CurrentUser = null;
+        NavManager.NavigateTo("/login");
+    }
+}

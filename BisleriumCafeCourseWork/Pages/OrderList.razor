@@ -1,0 +1,122 @@
+﻿@page "/orderlist"
+
+<div class="p-3">
+
+	@if (_showAddInDialog)
+	{
+		<ModalDialog Title="@_dialogTitle" OkLabel="@_dialogOkLabel" OnClose="@CreateOrEditAddIn">
+			<div>
+				<ul>
+					@foreach (var obj in _coffeeAdInId)
+					{
+						<li>
+							@{
+								var addIn = AddOnService.GetById(obj);
+								<span>@addIn.Name </span>
+							}
+						</li>
+					}
+				</ul>
+			</div>
+		</ModalDialog>
+	}
+
+
+	<table class="table table-striped coffee-table">
+		<thead>
+			<tr>
+				<th>S.No</th>
+				<th>Order Date</th>
+				<th>Coffee Type</th>
+				<th>View Add In</th>
+				<th>Total Price</th>
+				<th>CreatedBy</th>
+			</tr>
+		</thead>
+		<tbody>
+			@{
+				IEnumerable<Order> orders = _order;
+				int sno = 1;
+
+				foreach (var order in orders)
+				{
+					<tr>
+						<td>@sno</td>
+						<td>@order.OrderDate.ToShortDateString()</td>
+						<td>@{
+								var coffee = CoffeeService.GetById(order.CoffeeId);
+							}
+							@coffee.Type
+
+						</td>
+					
+						<td><button class="btn btn-primary" @onclick="() => ShowAddIn(order.Id)">View Add Ins</button></td>
+						<td><b>NPR.</b>@order.TotalPrice</td>
+						<td>@{
+								var user = UserService.GetById(order.CreatedBy);
+							}
+							@user.Role
+						</td>
+
+					</tr>
+					sno++;
+				}
+			}
+		</tbody>
+	</table>
+</div>
+
+@code {
+	[CascadingParameter]
+	private GlobalState _globalState { get; set; }
+	private List<Order> _order { get; set; }
+	private List<CoffeeType> _coffeeList { get; set; }
+	private List<CoffeeAddIns> _coffeeAddInList { get; set; }
+	private List<Guid> _coffeeAdInId { get; set; }
+
+	public bool _showAddInDialog = false;
+	private string _dialogTitle { get; set; }
+	private string _dialogOkLabel { get; set; }
+
+	private string _orderPath = UtilityService.GetAppCoffeeOrdersFilePath();
+	private string _coffeePath = UtilityService.GetAppCoffeeFilePath();
+	private string _addInPath = UtilityService.GetAppCoffeeAddInsFilePath();
+
+	private Order _orderModel { get; set; }
+
+	protected override void OnInitialized()
+	{
+		_order = OrderService.GetAll(_orderPath);
+		_coffeeList = CoffeeService.GetAll(_coffeePath);
+		_coffeeAddInList = AddOnService.GetAll(_addInPath);
+	}
+
+	private void ShowAddIn(Guid orderId)
+	{
+		_dialogTitle = "Add Ins";
+		_dialogOkLabel = "OK";
+		_showAddInDialog = true;
+		_coffeeAdInId = OrderService.GetAddInList(orderId);
+	}
+
+	private void CreateOrEditAddIn(bool isClosed)
+	{
+		if (isClosed)
+		{
+			_showAddInDialog = false;
+		}
+		else
+		{
+			_showAddInDialog = true;
+
+		}
+	}
+
+
+
+
+
+
+
+
+}

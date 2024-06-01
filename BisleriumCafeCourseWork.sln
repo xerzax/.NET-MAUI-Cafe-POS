@@ -1,0 +1,27 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34330.188
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BisleriumCafeCourseWork", "BisleriumCafeCourseWork\BisleriumCafeCourseWork.csproj", "{E8C4056D-7FB4-4225-B167-BB7F4C62B71B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E8C4056D-7FB4-4225-B167-BB7F4C62B71B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E8C4056D-7FB4-4225-B167-BB7F4C62B71B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E8C4056D-7FB4-4225-B167-BB7F4C62B71B}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{E8C4056D-7FB4-4225-B167-BB7F4C62B71B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E8C4056D-7FB4-4225-B167-BB7F4C62B71B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E8C4056D-7FB4-4225-B167-BB7F4C62B71B}.Release|Any CPU.Deploy.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8947E699-F41E-46A5-8F39-404DEAC5E66B}
+	EndGlobalSection
+EndGlobal

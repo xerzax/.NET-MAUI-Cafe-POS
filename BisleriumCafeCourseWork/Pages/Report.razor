@@ -1,0 +1,440 @@
+﻿@page "/report"
+@using System.Globalization
+@inject IJSRuntime _jsRuntime
+
+<div class="p-3">
+<div class="row mt-3 mb-3">
+	<div class="col-6">
+		<h3>Revenue Report</h3>
+	</div>
+	<div class="col-6 text-end">
+		<button class="btn btn-outline-dark" type="button" @onclick="OpenReportDialog">
+			<i class="fa-solid fa-plus"></i> &nbsp; Download PDF
+		</button> 
+	</div>
+</div>
+
+<ul class="nav nav-tabs">
+	<li class="nav-item">
+		<a class='nav-link btn @(_tabFilter == "Coffee" ? "active" : "")' @onclick='()=>TabFilter("Coffee")'>Coffee</a>
+	</li>
+	<li class="nav-item">
+		<a class='nav-link btn @(_tabFilter == "Add In" ? "active" : "")' @onclick='()=>TabFilter("Add In")'>Add In</a>
+	</li>
+</ul>
+
+	<table class="table">
+		<thead>
+			<tr>
+				<th class="text-start">Title</th>
+				<th class="text-start">Unit Price</th>
+				<th class="text-start">Total Sales</th>
+				<th class="text-start">Last Ordered Date</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			@foreach (var item in _orderModels)
+			{
+				<tr>
+					<td>@item.Name</td>
+					<td class="text-start">@item.Price.ToString("N2", CultureInfo.CreateSpecificCulture("ne-NP"))</td>
+					<td class="text-start">@item.TotalSales</td>
+					<td class="text-start">@item.LastOrderedDate</td>
+				</tr>
+			}
+			<tr>
+				<td colspan="3" class="text-start"><strong>Total</strong></td>
+				<td class="text-start"><strong>@_orderModels.Sum(x => x.TotalSales)</strong></td>
+				<td></td>
+			</tr>
+		</tbody>
+	</table>
+
+
+@if (_showStatsDialog)
+{
+	<ModalDialog Title="@_dialogTitle" OnClose="@OnDownloadReport" OkLabel="@_dialogOkLabel">
+		<form>
+			<div class="mb-3">
+				<label class="form-label">Select an action to download a report</label>
+				<div class="form-check mb-2">
+					<input id="userRole" type="radio" class="form-check-input" name="frequency" value="1" @onchange="FrequencyChangeHandler">
+					<label class="form-check-label" for="userRole">Daily</label>
+				</div>
+				<div class="form-check mb-2">
+					<input id="adminRole" type="radio" class="form-check-input" name="frequency" value="2" @onchange="FrequencyChangeHandler">
+					<label class="form-check-label" for="adminRole">Monthly</label>
+				</div>
+				@if (_showMonthsDropdown)
+				{
+					<select class="form-control" @bind="_selectedMonth">
+						<option selected="selected" disabled="disabled">Select a Month</option>
+						@for (var i = 1; i <= 12; i++)
+						{
+							<option value="@i">@DateTimeFormatInfo.CurrentInfo.GetMonthName(i)</option>
+						}
+					</select>
+				}
+			</div>
+			@if (!string.IsNullOrEmpty(_recordErrorMessage))
+			{
+				<ErrorMessage Type="danger" Message="@_recordErrorMessage" />
+			}
+			@if (!string.IsNullOrEmpty(_recordSuccessMessage))
+			{
+				<ErrorMessage Type="success" Message="@_recordSuccessMessage" />
+			}
+		</form>
+	</ModalDialog>
+	}
+</div> 
+
+@code{
+
+	[CascadingParameter]
+	private GlobalState _globalState { get; set; }
+
+	private bool _showStatsDialog { get; set; } = false;
+
+	private int _selectedAction { get; set; }
+
+	private int _selectedMonth { get; set; }
+
+	private string _recordErrorMessage { get; set; }
+
+	private string _recordSuccessMessage { get; set; }
+
+	private bool _showMonthsDropdown { get; set; }
+
+	private string _dialogTitle { get; set; }
+
+	private string _dialogOkLabel { get; set; }
+
+	private string _tabFilter { get; set; } = "Coffee";
+
+	private List<ReportModel> _orderModels { get; set; } = new();
+
+	private List<ReportModel> _coffeeOrderModels { get; set; } = new();
+
+	private List<ReportModel> _addInOrderModels { get; set; } = new();
+
+
+	private readonly string _ordersPath = UtilityService.GetAppCoffeeOrdersFilePath();
+
+	private readonly string _coffeesPath = UtilityService.GetAppCoffeeFilePath();
+
+	private readonly string _addInsPath = UtilityService.GetAppCoffeeAddInsFilePath();
+
+
+	protected override void OnInitialized()
+	{
+		var coffees = CoffeeService.GetAll(_coffeesPath);
+
+		var orders = OrderService.GetAll(_ordersPath);
+		foreach (var coffee in coffees)
+		{
+			var orderItems = orders.Where(x => x.CoffeeId == coffee.Id);
+
+			var orderList = orderItems as Order[] ?? orderItems.ToArray();
+
+			_orderModels.Add(new ReportModel()
+		        {
+		            Id = coffee.Id,
+		            Name = coffee.Type,
+		            Price = coffee.Price,
+		            TotalSales = orderList.Any() ? orderList.Sum(x => x.CoffeeTotal) : 0,
+		            LastOrderedDate = orderList.Any() ? orderList.Max(x => x.OrderDate).ToString("dd-MM-yyyy") : "Not Ordered Yet"
+		        });
+		}
+	}
+
+	private void TabFilter(string status)
+	{
+		_tabFilter = status;
+		_orderModels  = new();
+
+		switch (status)
+		{
+			case "Coffee":
+				{
+					var coffees = CoffeeService.GetAll(_coffeesPath);
+
+					var orders = OrderService.GetAll(_ordersPath);
+					foreach (var coffee in coffees)
+					{
+						var orderItems = orders.Where(x => x.CoffeeId == coffee.Id);
+
+						var orderList = orderItems as Order[] ?? orderItems.ToArray();
+
+						_orderModels.Add(new ReportModel()
+							{
+								Id = coffee.Id,
+								Name = coffee.Type,
+								Price = coffee.Price,
+								TotalSales = orderList.Any() ? orderList.Sum(x => x.CoffeeTotal) : 0,
+								LastOrderedDate = orderList.Any() ? orderList.Max(x => x.OrderDate).ToString("dd-MM-yyyy") : "Not Ordered Yet"
+							});
+					}
+
+
+					break;
+				}
+			case "Add In":
+				{
+					var addIns = AddOnService.GetAll(_addInsPath);
+
+					var orders = OrderService.GetAll(_ordersPath);
+
+					foreach(var addIn in addIns)
+					{
+						int totalSales = 0;
+						DateTime? lastOrdered = null;
+
+						foreach (var order in orders)
+						{
+							foreach (var orderAddIn in order.AddInId)
+							{
+								if (orderAddIn == addIn.Id)
+								{
+									totalSales += 1; 
+									if (lastOrdered == null || order.OrderDate > lastOrdered)
+									{
+										lastOrdered = order.OrderDate; 
+									}
+								}
+							}
+						}
+
+						_orderModels.Add(new ReportModel()
+							{
+								Id = addIn.Id,
+								Name = addIn.Name,
+								Price = addIn.Price,
+								TotalSales = totalSales,
+								LastOrderedDate = lastOrdered?.ToString("dd-MM-yyyy") ?? "Not Ordered Yet"
+							});
+					}
+
+
+
+					// foreach (var addIn in addIns)
+					// {
+					// 	var orderItems = orders.Select(x => x.AddInId == addIn.Id);
+
+
+					// 	var orderAddInItems = orderItems as ReportModel[] ?? orderItems.ToArray();
+
+					// 	_orderModels.Add(new ReportModel()
+					// 		{
+					// 			Id = addIn.Id,
+					// 			Name = addIn.Name,
+					// 			Price = addIn.Price,
+					// 			TotalSales = orderAddInItems.Any() ? orderAddInItems.Sum(x => x.AddInQuantity) : 0,
+					// 			LastOrderedDate = orderAddInItems.Any() ? orderAddInItems.Max(x => x.CreatedOn).ToString("dd-MM-yyyy") : "Not Ordered Yet"
+					// 		});
+					// }
+
+					break;
+				}
+		}
+	}
+
+	private void FrequencyChangeHandler(ChangeEventArgs e)
+	{
+		_selectedAction = Convert.ToInt32(e.Value.ToString());
+
+		_showMonthsDropdown = _selectedAction == 2;
+	}
+	private void OpenReportDialog()
+	{
+		_dialogTitle = "Report Generation";
+
+		_dialogOkLabel = "Select";
+
+		_showStatsDialog = true;
+
+		_showMonthsDropdown = false;
+
+		_selectedMonth = 0;
+
+		_recordErrorMessage = "";
+
+		_recordSuccessMessage = "";
+
+		_selectedAction = 0;
+	}
+
+	private void OnDownloadReport(bool isClosed)
+	{
+		if (isClosed)
+		{
+			_showStatsDialog = false;
+		}
+		else
+		{
+			try
+			{
+				_recordErrorMessage = "";
+
+				switch (_selectedAction)
+				{
+					case 0:
+						throw new Exception("Select a valid action before submitting your request.");
+					case 2 when _selectedMonth == 0:
+						throw new Exception("Select a valid action before submitting your request.");
+					case 1:
+					case 2:
+						break;
+				}
+
+				GeneratePdf();
+			}
+			catch (Exception e)
+			{
+				_recordErrorMessage = e.Message;
+
+				Console.WriteLine(e.Message);
+			}
+		}
+	}
+
+	private void GeneratePdf()
+	{
+		try
+		{
+			var orders = OrderService.GetAll(_ordersPath);
+			var addIns = AddOnService.GetAll(_addInsPath);
+			var coffees = CoffeeService.GetAll(_coffeesPath);
+
+			orders = _selectedAction == 1
+				? orders.Where(x => x.OrderDate.Date == DateTime.Today.Date).ToList()
+				: orders.Where(x => x.OrderDate.Month == _selectedMonth).ToList();
+
+			var coffeeSales = coffees.Select(coffee => new ReportModel()
+				{
+					Id = coffee.Id,
+					Name = coffee.Type,
+					Price = coffee.Price,
+					TotalSales = orders.Where(x => x.CoffeeId == coffee.Id).Sum(x => x.CoffeeTotal),
+					Qty = orders.Where(x => x.CoffeeId == coffee.Id).Sum(x => x.CoffeeTotal) / coffee.Price,
+					LastOrderedDate = orders.Where(x => x.CoffeeId == coffee.Id)
+								.Select(x => x.OrderDate)
+								.DefaultIfEmpty(DateTime.MinValue)
+								.Max()
+								.ToString("dd-MM-yyyy")
+				})
+				.OrderByDescending(x => x.TotalSales)
+				.Take(5)
+				.Select(orderModel =>
+				{
+
+					if (orderModel.LastOrderedDate == DateTime.MinValue.ToString("dd-MM-yyyy"))
+					{
+						orderModel.LastOrderedDate = "Not ordered yet";
+					}
+					return orderModel;
+				});
+
+
+			var addInSales = addIns.Select(addIn => new ReportModel()
+				{
+					Id = addIn.Id,
+					Name = addIn.Name,
+					Price = addIn.Price,
+					TotalSales = orders.Where(order => order.AddInId.Contains(addIn.Id)).Sum(order => order.AddInTotal),
+					Qty = orders.Where(order => order.AddInId.Contains(addIn.Id)).Sum(order => order.AddInTotal)/addIn.Price,
+
+
+					LastOrderedDate = orders.Where(order => order.AddInId.Contains(addIn.Id))
+									.Select(order => order.OrderDate)
+									.DefaultIfEmpty(DateTime.MinValue)
+									.Max()
+									.ToString("dd-MM-yyyy")
+				})
+			.OrderByDescending(x => x.TotalSales)
+			.Take(5)
+		.Select(reportModel =>
+		{
+			if (reportModel.LastOrderedDate == DateTime.MinValue.ToString("dd-MM-yyyy"))
+		{
+			reportModel.LastOrderedDate = "Not ordered yet";
+		}
+		return reportModel;
+		});
+
+			// var addInSales = addIns.Select(addIn => new ReportModel()
+			//     {
+			//         Id = addIn.Id,
+			//         Name = addIn.Name,
+			//         Price = addIn.Price,
+			//         TotalSales = orderAddIns.Where(x => x.AddInId == addIn.Id).Sum(x => x.AddInQuantity),
+			//         LastOrderedDate = orderAddIns.Where(x => x.AddInId == addIn.Id)
+			//                 .Select(x => x.CreatedOn)
+			//                 .DefaultIfEmpty(DateTime.MinValue)
+			//                 .Max()
+			//                 .ToString("dd-MM-yyyy")
+			//     })
+			//     .OrderByDescending(x => x.TotalSales)
+			//     .Take(5)
+			//     .Select(orderModel =>
+			//     {
+			//         if (orderModel.L
+			//
+			// astOrderedDate == DateTime.MinValue.ToString("dd-MM-yyyy"))
+			//         {
+			//             orderModel.LastOrderedDate = "Not ordered yet";
+			//         }
+			//         return orderModel;
+			//     });
+
+			var orderRecordsEnumerable = coffeeSales as ReportModel[] ?? coffeeSales.ToArray();
+			var addInRecords = addInSales as ReportModel[] ?? addInSales.ToArray();
+
+			if (orderRecordsEnumerable.All(x => x.TotalSales == 0) && addInRecords.All(x => x.TotalSales == 0))
+			{
+				throw new Exception(_selectedAction == 1
+					? "No sales record found for today."
+					: "No sales record found for the selected month.");
+			}
+
+			var reportName = $"Bislerium Revenue Report - {DateTime.Now:dd-MM-yyyy HH:mm:ss} [{(_selectedAction == 1 ? "Daily" : "Monthly")} Report_{GetReportFrequency()}].pdf";
+
+			var reportModel = new BisleriumPDF()
+				{
+					Title = _selectedAction == 1 ? "Daily Report" : "Monthly Report",
+					Frequency = GetReportFrequency(),
+					TotalRevenue = orders.Sum(x => x.TotalPrice),
+					FileName = reportName,
+					CoffeeRecords = orderRecordsEnumerable,
+					AddInRecords = addInRecords,
+					UserName = _globalState.CurrentUser?.Username ?? "",
+					Role = _globalState.CurrentUser?.Role == Role.Admin ? "Admin" : "Staff"
+				};
+
+			ReportService.GeneratePdfReport(_jsRuntime, reportModel);
+
+			_recordSuccessMessage = "Your report has been successfully generated, please check your downloads folder.";
+		}
+		catch (Exception e)
+		{
+			_recordErrorMessage = e.Message;
+
+			Console.WriteLine(e.Message);
+		}
+	}
+
+	private string GetReportFrequency()
+	{
+		return _selectedAction == 1
+			? DateTime.Now.ToString("dd-MM-yyyy")
+			: DateTimeFormatInfo.CurrentInfo.GetMonthName(_selectedMonth);
+	}
+
+
+
+  
+    
+
+
+}

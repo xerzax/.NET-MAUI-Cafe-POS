@@ -1,0 +1,86 @@
+﻿@page "/login"
+@inject NavigationManager NavManager
+
+<div class="">
+    <div class="w-100 coffee-bg d-flex align-items-center justify-content-center" style="height: 100vh;">
+
+        <div class="form-login p-4 shadow rounded" style="width:600px;">
+            <form class="text-center" @onsubmit="LoginHandler">
+                <img class="mb-3" src="img/cat-icon.jpg" alt="Cafe Icon" height="100" width="100">
+
+                <h1 class="h3 mb-4 fw-bold">Bislerium Cafe</h1>
+
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="floatingInput" @bind="_username" placeholder="Username" />
+                    <label for="floatingInput">Username</label>
+                </div>
+
+                <div class="form-floating mb-4">
+                    <input type="password" class="form-control" id="floatingPassword" @bind="_password" placeholder="Password" />
+                    <label for="floatingPassword">Password</label>
+                </div>
+
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @_errorMessage
+                    </div>
+                }
+
+                <button class="w-100 btn btn-lg btn-primary" type="submit">
+                    Login
+                </button>
+            </form>
+        </div>
+    </div>
+
+
+
+
+</div>
+
+@code {
+    [CascadingParameter]
+    private GlobalState _globalState { get; set; }
+    private bool _showDefaultCredentials { get; set; }
+    private string _username { get; set; }
+    private string _password { get; set; }
+    private string _errorMessage = "";
+
+    protected override void OnInitialized()
+    {
+        _globalState.CurrentUser = null;
+
+        try
+        {
+            var user = UserService.Login(UserService.SeedUsername, UserService.SeedPassword);
+            _showDefaultCredentials = user.HasInitialPassword;
+
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
+            Console.WriteLine(e.Message);
+        }
+    }
+
+    private void LoginHandler()
+    {
+        try
+        {
+
+            var user = _globalState.CurrentUser = UserService.Login(_username, _password);
+
+            if (user != null)
+            {
+                NavManager.NavigateTo("/home");
+            }
+        }
+
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
+            Console.WriteLine(e);
+        }
+    }
+}

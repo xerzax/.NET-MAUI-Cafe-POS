@@ -1,0 +1,11 @@
+﻿<div class="alert alert-@Type" role="alert">
+    <i class="fa-solid fa-triangle-exclamation"></i> &nbsp; @Message
+</div>
+
+@code {
+    [Parameter]
+    public string Type { get; set; }
+
+    [Parameter]
+    public string Message { get; set; }
+}

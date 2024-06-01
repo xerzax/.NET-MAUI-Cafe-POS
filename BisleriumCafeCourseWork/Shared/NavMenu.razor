@@ -1,0 +1,86 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+	<div class="container-fluid">
+		<a class="navbar-brand" href=""><i class="bi bi-shop"></i> &nbsp; Bislerium Cafe</a>
+		<button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+			Toggle
+		</button>
+	</div>
+</div>
+
+<div class='@(_collapseNavMenu ? "collapse" : "")' @onclick="ToggleNavMenu">
+	<nav class="flex-column">
+		
+		<div class="nav-item px-3">
+			<NavLink class="nav-link" href="home">
+				<i class="bi bi-house"></i> &nbsp; Home
+			</NavLink>
+		</div>
+		@if (UserRole == Role.Admin)
+		{
+			<div class="nav-item px-3">
+				<NavLink class="nav-link" href="users" Match="NavLinkMatch.All">
+					<i class="bi bi-people-fill"></i> &nbsp; Users
+				</NavLink>
+			</div>
+		}
+		<div class="nav-item px-3">
+			<NavLink class="nav-link" href="coffeelist">
+				<i class="bi bi-cup-hot-fill"></i> &nbsp; Coffee Type
+			</NavLink>
+		</div>
+		<div class="nav-item px-3">
+			<NavLink class="nav-link" href="coffeeaddin">
+				<i class="bi bi-patch-plus-fill"></i> &nbsp; Add In
+			</NavLink>
+		</div>
+		@if (_globalState.CurrentUser.Role == Role.Staff)
+		{
+			<div class="nav-item px-3">
+				<NavLink class="nav-link" href="takeOrder">
+					<i class="bi bi-receipt"></i> &nbsp; Take Order
+				</NavLink>
+			</div>
+		} 
+		<div class="nav-item px-3">
+			<NavLink class="nav-link" href="orderlist">
+				<i class="bi bi-receipt"></i> &nbsp; Orders
+			</NavLink>
+		</div>
+		<div class="nav-item px-3">
+			<NavLink class="nav-link" href="report">
+				<i class="bi bi-file-earmark-bar-graph"></i>&nbsp; Report
+			</NavLink>
+		</div>
+		
+		<div class="nav-item px-3 text-danger">
+			<NavLink class="nav-link text-danger" role="button" @onclick="LogoutHandler">
+				<i class="bi bi-box-arrow-left"></i> &nbsp; Logout
+			</NavLink>
+		</div>
+	</nav>
+</div>
+
+@code {
+
+	[CascadingParameter]
+	private GlobalState _globalState { get; set; }
+
+
+	[Parameter]
+	public string Username { get; set; }
+
+	[Parameter]
+	public Role UserRole { get; set; }
+
+	[Parameter]
+	public EventCallback LogoutHandler { get; set; }
+
+	private bool _collapseNavMenu { get; set; } = true;
+
+	private string NavMenuCssClass => _collapseNavMenu ? "collapse" : null;
+
+	private void ToggleNavMenu()
+	{
+		_collapseNavMenu = !_collapseNavMenu;
+	}
+}

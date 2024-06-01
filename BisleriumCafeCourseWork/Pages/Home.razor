@@ -1,0 +1,82 @@
+﻿@page "/home"
+
+
+<div class="container my-5">
+    <h3 class="text-center mb-4 color-coffee fw-bold">Dashboard</h3>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Coffee Types<i class="bi bi-cup-hot" style="margin-left: 10px;"></i></h5>
+                    <p class="card-text fs-3">@_coffeeList.Count</p>
+                </div>
+                <div class="card-footer coffee-bg-secondary text-white">
+                    Total Number Of Coffee Types
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Add-Ins Types<i class="bi bi-cookie" style="margin-left: 10px;"></i></h5>
+                    <p class="card-text fs-3">@_coffeeAddInList.Count</p>
+                </div>
+                <div class="card-footer coffee-bg-secondary text-white">
+                    Total Number Of Add-Ins Types
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Customers<i class="bi bi-people" style="margin-left: 10px;"></i></h5>
+                    <p class="card-text fs-3">@_memberList.Count</p>
+                </div>
+                <div class="card-footer coffee-bg-secondary text-white">
+                    Total Number Of Customers
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Revenue<i class="bi bi-bank" style="margin-left: 10px;"></i></h5>
+                    <p class="card-text fs-3">@_order.Sum(x => x.TotalPrice)</p>
+                </div>
+                <div class="card-footer coffee-bg-secondary text-white">
+                    Revenue Generated Till Date
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    [CascadingParameter]
+    private GlobalState _globalState { get; set; }
+    private List<Order> _order { get; set; }
+    private List<CoffeeType> _coffeeList { get; set; }
+    private List<CoffeeAddIns> _coffeeAddInList { get; set; }
+    private List<User> _memberList { get; set; }
+
+
+
+
+    private string _orderPath = UtilityService.GetAppCoffeeOrdersFilePath();
+    private string _coffeePath = UtilityService.GetAppCoffeeFilePath();
+    private string _addInPath = UtilityService.GetAppCoffeeAddInsFilePath();
+    private string _userPath = UtilityService.GetAppUsersFilePath();
+
+
+    private Order _orderModel { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _order = OrderService.GetAll(_orderPath);
+        _coffeeList = CoffeeService.GetAll(_coffeePath);
+        _coffeeAddInList = AddOnService.GetAll(_addInPath);
+        _memberList = UserService.GetAll(_userPath).Where(x => x.Role == Role.Member).ToList();
+    }
+
+}

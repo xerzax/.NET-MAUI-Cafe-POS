@@ -1,0 +1,308 @@
+﻿@page "/coffeelist"
+
+<div class="p-3">
+
+<div class="row mt-3 mb-3 ">
+
+	<div class="col-6">
+		<h3 class="color-coffee">Coffee Type</h3>
+
+	</div>
+	
+	@* only visible to the admin *@
+	<div class="col-6 text-end">
+		@if (_globalState.CurrentUser?.Role == Role.Admin)
+		{
+			<button class="btn btn-primary " type="button" @onclick="OpenAddCoffeeDialog">
+					<i class="bi bi-plus-circle"></i> &nbsp; Add a new coffee to menu
+			</button>
+		}
+	</div>
+
+	
+	@if (_showAddCoffeeDialog)
+	{
+			<!-- Modal for adding or editing coffee details -->
+		<ModalDialog Title="@_dialogTitle" OkLabel="@_dialogOkLabel" OnClose="@CreateCoffee">
+			<form>
+				<div class="mb-3">
+					<label for="text" class="form-label">&nbsp;Coffee Name</label>
+					<input type="text" class="form-control" @bind="_coffeeModel.Type" placeholder="Enter the coffee type">
+						@if (string.IsNullOrWhiteSpace(_coffeeModel.Type))
+						{
+							<div class="text-secondary">Please enter a valid coffee name.</div>
+						}
+				</div>
+				<div class="mb-3">
+					<label for="number" class="form-label">&nbsp;Price</label>
+					<input type="number" class="form-control" @bind="_coffeeModel.Price" placeholder="Enter the price of coffee type">
+						@if (_coffeeModel.Price <= 0)
+						{
+							<div class="text-secondary">Please enter a valid price greater than zero.</div>
+						}
+				</div>
+			</form>
+
+			@if (!string.IsNullOrEmpty(_coffeeProductErrorMessage))
+			{
+				<ErrorMessage Type="danger" Message="@_coffeeProductErrorMessage" />
+			}
+		</ModalDialog>
+	}
+
+	@if (_showDeleteCoffeeDialog)
+	{
+		<!-- Modal for confirming coffee deletion -->
+		<ModalDialog Title="@_dialogTitle" OnClose="@OnDeleteCoffeeDialogClose" OkLabel="@_dialogOkLabel">
+
+			<p>Are you sure you want to delete <strong>@_coffeeModel.Type</strong> user and their data?</p>
+
+			@if (!string.IsNullOrEmpty(_deleteCoffeeErrorMessage))
+			{
+				<ErrorMessage Type="danger" Message="@_deleteCoffeeErrorMessage" />
+			}
+		</ModalDialog>
+	}
+</div>
+
+
+<table class="table table-striped  coffee-table">
+		<thead>
+			<tr>
+				<th>S.No</th>
+
+			<th>
+					<div class="d-flex">
+						<input type="search" class="form-control search" placeholder="Search a product" @oninput="SearchCoffeeName" />
+						<a class='btn text-@(_sortBy == "coffee" ? "primary" : "secondary")' data-mdb-toggle="tooltip"
+						   @onclick='()=>SortByHandler("type")'>
+							<span class='oi oi-sort-@(_sortBy == "type" ? _sortDirection : "ascending")' />
+						</a>
+					</div>
+				</th> 
+				<th>
+					<div class="d-flex">
+						Price
+						<a class='btn text-@(_sortBy == "price" ? "primary" : "secondary")' data-mdb-toggle="tooltip"
+						   @onclick='()=>SortByHandler("price")'>
+							<span class='oi oi-sort-@(_sortBy == "price" ? _sortDirection : "ascending")' />
+						</a>
+					</div>
+				</th>
+				<th>
+					<div class="d-flex">
+						Created by
+						<a class='btn text-@(_sortBy == "createdBy" ? "primary" : "secondary")' data-mdb-toggle="tooltip"
+						   @onclick='()=>SortByHandler("createdBy")'>
+							<span class='oi oi-sort-@(_sortBy == "createdBy" ? _sortDirection : "ascending")' />
+						</a>
+					</div>
+				</th>
+				<th>Actions</th>
+			</tr>
+		</thead>
+	<tbody>
+		@{
+			IEnumerable<CoffeeType> coffees = _coffee;
+
+			int sno = 1;
+				if (_sortBy == "type")
+				{
+					coffees = _sortDirection == "ascending" ? coffees.OrderBy(p => p.Type) : coffees.OrderByDescending(p => p.Type);
+				}
+				else if (_sortBy == "price")
+				{
+					coffees = _sortDirection == "ascending" ? CoffeeService.MergeSort(coffees.ToList()) : coffees.OrderByDescending(p => p.Price);
+				}
+				else if (_sortBy == "createdBy")
+				{
+					coffees = _sortDirection == "ascending" ? coffees.OrderBy(p => p.CreatedBy) : coffees.OrderByDescending(p => p.CreatedBy);
+				}
+
+
+		foreach (var coffee in coffees)
+			{
+				<tr>
+					<td>@sno</td>
+					<td>@coffee.Type</td>
+						<td><b>NPR.</b>@coffee.Price</td>
+
+					<td>
+						@{
+							var creator = UserService.GetById(coffee.CreatedBy);
+							<span>@(creator == null ? "Administration" : creator.Username)</span>
+						}
+					</td>
+					<td class="d-flex">
+						<button class="btn btn-outline-danger me-2" type="button" @onclick="()=>OpenDeleteCoffeeDialog(coffee)">
+							<i class="bi bi-trash3"></i> &nbsp; Delete
+						</button>
+						<button class="btn btn-outline-success" type="button" @onclick="()=>OpenEditCoffeeDialog(coffee)">
+							<i class="bi bi-pencil"></i> &nbsp; Edit
+						</button>
+					</td>
+				</tr>
+				sno++;
+			}
+		}
+	</tbody>
+</table>
+</div>
+
+@code {
+	[CascadingParameter]
+	private GlobalState _globalState { get; set; }
+
+	private List<CoffeeType> _coffee { get; set; }
+
+	private string _dialogTitle { get; set; }
+
+	private string _dialogOkLabel { get; set; }
+
+	private string _coffeeProductErrorMessage { get; set; }
+
+	private string _deleteCoffeeErrorMessage { get; set; }
+	private bool _showAddCoffeeDialog = false;
+	private bool _showDeleteCoffeeDialog = false;
+
+	private string _sortBy = "type";
+
+	private string _tabFilter = "All";
+
+
+	private string _sortDirection = "ascending";
+
+	private string _coffeePath = UtilityService.GetAppCoffeeFilePath();
+
+	private CoffeeType _coffeeModel { get; set; }
+
+	// Loading coffee data on component initialization
+	protected override void OnInitialized()
+	{
+		_coffee = CoffeeService.GetAll(_coffeePath);
+	}
+
+
+	private void OpenAddCoffeeDialog()
+	{
+		_dialogTitle = "Add a new coffee to menu";
+
+		_dialogOkLabel = "Add";
+
+
+		_coffeeModel = new CoffeeType();
+
+		_coffeeModel.Id = Guid.Empty;
+		_showAddCoffeeDialog = true;
+
+	}
+	private void OpenEditCoffeeDialog(CoffeeType coffee)
+	{
+		_dialogTitle = "Edit Coffee Type";
+		_dialogOkLabel = "Update";
+		_coffeeModel = coffee;
+		_showAddCoffeeDialog = true; // Reusing the add dialog for editing
+	}
+
+	private void OpenDeleteCoffeeDialog(CoffeeType coffee)
+	{
+		_dialogTitle = "Delete Coffee Type";
+
+		_dialogOkLabel = "Confirm";
+
+		_coffeeModel = coffee;
+
+		_showDeleteCoffeeDialog = true;
+	}
+
+	private void SearchCoffeeName(ChangeEventArgs e)
+	{
+		var searchItem = e.Value.ToString();
+
+		if (!string.IsNullOrEmpty(searchItem) && searchItem.Length > 2)
+		{
+			_coffee = CoffeeService.GetAll(_coffeePath).Where(p => p.Type.ToLower().Contains(searchItem.ToLower())).ToList();
+		}
+		else
+		{
+			_coffee = CoffeeService.GetAll(_coffeePath);
+		}
+	}
+
+
+	private void SortByHandler(string sortByName)
+	{
+		if (_sortBy == sortByName)
+		{
+			_sortDirection = _sortDirection == "ascending" ? "descending" : "ascending";
+		}
+		else
+		{
+			_sortBy = sortByName;
+
+			_sortDirection = "ascending";
+		}
+	}
+
+	private void OnDeleteCoffeeDialogClose(bool isClosed)
+	{
+		if (isClosed)
+		{
+
+			_showDeleteCoffeeDialog = false;
+
+			_coffeeModel = null;
+		}
+		else
+		{
+			try
+			{
+				_deleteCoffeeErrorMessage = "";
+
+				_coffee = CoffeeService.Delete(_coffeeModel.Id);
+
+				_showDeleteCoffeeDialog = false;
+
+				_coffeeModel = null;
+			}
+			catch (Exception e)
+			{
+				_deleteCoffeeErrorMessage = e.Message;
+
+				Console.WriteLine(e.Message);
+			}
+		}
+	}
+	private void CreateCoffee(bool isClosed)
+	{
+		if (isClosed)
+		{
+			_showAddCoffeeDialog = false;
+		}
+		else
+		{
+			try
+			{
+				_coffeeProductErrorMessage = "";
+
+				if (_coffeeModel.Id == Guid.Empty)
+				{
+					// Add new coffee
+					_coffee = CoffeeService.Create(_globalState.CurrentUser.Id, _coffeeModel.Type, _coffeeModel.Price);
+				}
+				else
+				{
+					// Update existing coffee
+					_coffee = CoffeeService.Edit(_coffeeModel.Id, _coffeeModel.Type, _coffeeModel.Price);
+				}
+
+				_showAddCoffeeDialog = false;
+			}
+			catch (Exception e)
+			{
+				_coffeeProductErrorMessage = e.Message;
+				Console.WriteLine(e.Message);
+			}
+		}
+	}
+}

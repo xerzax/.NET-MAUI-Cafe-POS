@@ -1,0 +1,509 @@
+﻿@page "/takeOrder"
+@inject NavigationManager NavManager
+
+<div class="p-3">
+
+	<div class="row mt-3 mb-3 ">
+
+		<div class="col-6">
+			<h3 class="color-coffee font-bold">Create Order</h3>
+		</div>
+
+		<div class="col-md-8">
+			@if (isSuccess)
+			{
+				<div class="toast align-items-center text-white bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+					<div class="d-flex">
+						<div class="toast-body">
+							New member register successfully.
+						</div>
+						<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+					</div>
+				</div>
+			}
+			<form>
+				<div class="row">
+					<div class="col-md-9 mb-3">
+						<label for="coffeeTypeDropdown" class="form-label"><strong>Coffee Type</strong></label>
+						<select class="form-control" id="coffeeTypeDropdown" @onchange="OnSelectedCoffeeIdChanged">
+							<option value="" selected disabled>Select a coffee type</option>
+							@foreach (var coffee in _coffeeList)
+							{
+								<option value="@coffee.Id">@coffee.Type - @coffee.Price</option>
+							}
+						</select>
+					</div>
+
+				</div>
+				<div class="row">
+					<div class="col">
+						<div class="addInScroll">
+							<strong>Choose Add Ins</strong>
+							@foreach (var addIn in _coffeeAddInList)
+							{
+								<div class="mb-3">
+									<div class="form-check">
+										<input class="form-check-input" type="checkbox" id="@addIn.Id"
+											   checked="@_selectedAddInList[addIn.Id].IsSelected"
+											   @onchange="@(e => OnCheckboxChange(addIn.Id, (bool)e.Value))" />
+										<label class="form-check-label" for="@addIn.Id">@addIn.Name - @addIn.Price</label>
+									</div>
+								</div>
+							}
+						</div>
+					</div>
+				</div>
+
+
+
+				<div class="row">
+					<div class="col">
+
+						<label for="text" class="form-label"><strong>Choose customer type</strong></label>
+						<div class="form-check mb-2">
+							<label class="form-check-label" for="member">Member</label>
+							<input id="member" type="radio" class="form-check-input" name="memberType" value="member" @onchange="MemberChangeHandler" checked="@(_member == "member")">
+						</div>
+						<div class="form-check">
+							<label class="form-check-label" for="nonMember">Non-member</label>
+
+							<input id="nonMember" type="radio" class="form-check-input" name="memberType" value="nonMember" @onchange="MemberChangeHandler" checked="@(_member == "nonMember")">
+						</div>
+					</div>
+				</div>
+
+				<div>
+					@if (_showDialog)
+					{
+						<ModalDialog Title="@_dialogTitle" OnClose="@OnCloseDialog" OkLabel="@_dialogOkLabel">
+
+							<div class="form-check mb-2">
+								<label class="form-label" for="username">User's' Name</label>
+								<input id="username" type="text" class="form-control" @bind="@_userModel.Username" placeholder="Enter user's' name">
+							</div>
+							<div class="form-check mb-2">
+								<label class="form-label" for="phoneNumber">Phone Number</label>
+								<input id="phoneNumber" type="text" class="form-control" @bind="@_userModel.PhoneNumber" placeholder="Enter phone number">
+							</div>
+							@if (!string.IsNullOrEmpty(_createErrorMessage))
+							{
+								<ErrorMessage Type="danger" Message="@_createErrorMessage" />
+							}
+						</ModalDialog>
+
+					}
+				</div><div>
+
+					@if (_showOrderSummary)
+					{
+						<div class="toast align-items-center text-white bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+							<div class="d-flex">
+								<div class="toast-body">
+									New member register successfully.
+								</div>
+								<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+							</div>
+						</div>
+					}
+				</div>
+
+
+				<div>
+					@if (_member == "member")
+					{
+						<label for="userDropwdown" class="form-label"><strong>Member</strong></label>
+						<select class="form-control" id="userDropwdown" @onchange="HandleMemberChange">
+							<option value="" selected disabled>Select a member</option>
+
+							@foreach (var member in _memberList)
+							{
+
+								<option value="@member.Id">@member.Username</option>
+							}
+						</select>
+					}
+				</div>
+
+
+
+
+				<button type="button" class="btn btn-primary w-100 mt-2" @onclick=CreateOrder>Create</button>
+
+			</form>
+		</div>
+		<div class="col-md-4 order-summary">
+			<h6 class="color-coffee">Order Summary</h6>
+
+
+			@if (selectedCoffee.Price > 0)
+			{
+				<div>
+					<i class="bi bi-cup-hot color-coffee"></i>
+					<label for="priceInput" class="form-label ps-1"><strong>@selectedCoffee.Type - @selectedCoffee.Price</strong></label>
+				</div>
+			}
+
+			@if (selectedAddInIds.Count > 0)
+			{
+				@foreach (var addIns in selectedAddInIds)
+				{
+					<div>
+						@{
+							var addIn = AddOnService.GetById(addIns);
+						}
+						<label for="priceInput" class="form-label"><strong>@addIn.Name - @addIn.Price</strong></label>
+					</div>
+				}
+			}
+
+
+
+			<div class="d-flex mt-1 mb-1">
+				<label class="form-label"><strong>Total Price:</strong></label>
+				@if (total > 0)
+				{
+					<p class="@(_memberPrivelege == OrderScheme.Free || _memberPrivelege == OrderScheme.Discount ? "text-decoration-line-through" : "")">@total</p>
+					<br />
+					@if (_memberPrivelege == OrderScheme.Free || _memberPrivelege == OrderScheme.Discount)
+					{
+						<p>@totalUpdated</p>
+					}
+
+				}
+				else
+				{
+					<p>0</p>
+				}
+			</div>
+		</div>
+
+		<div>
+			<p>
+				Is a regular customer?
+				@if (_memberPrivelege == OrderScheme.Discount)
+				{
+					<span class="text-success">True</span>
+				}
+				else
+				{
+					<span class="text-success">False</span>
+
+				}
+			</p>
+		</div>
+		<div>
+			<p>
+				Free Coffee?
+				@if (_memberPrivelege == OrderScheme.Free)
+				{
+					<span class="text-success">Yes</span>
+				}
+				else
+				{
+					<span class="text-success">No</span>
+
+				}
+			</p>
+		</div>
+	</div>
+</div>
+
+
+@code {
+	[CascadingParameter]
+	private GlobalState _globalState { get; set; }
+
+	private List<Order> _order { get; set; }
+	private List<CoffeeType> _coffeeList { get; set; }
+	private List<User> _memberList { get; set; }
+
+
+	private List<CoffeeAddIns> _coffeeAddInList { get; set; }
+
+	List<Guid> selectedAddInIds = new List<Guid>();
+
+	Dictionary<Guid, (bool IsSelected, CoffeeAddIns AddIn)> _selectedAddInList = new Dictionary<Guid, (bool, CoffeeAddIns)>();
+
+	private string _dialogTitle { get; set; }
+
+	private double total = 0;
+	private double totalUpdated = 0;
+
+	private double coffeetotal = 0;
+	private double addintotal = 0;
+
+	private User _userModel = new User();
+
+
+	private string _dialogOkLabel = "Create Member";
+
+
+	private CoffeeType selectedCoffee = new CoffeeType();
+	private CoffeeAddIns selectedAddIn = new CoffeeAddIns();
+
+
+	private string _orderProductErrorMessage { get; set; }
+	private string _member { get; set; }
+	private string _createErrorMessage { get; set; }
+
+
+
+
+	private string _deleteorderErrorMessage { get; set; }
+	private bool _showAddorderDialog = false;
+	private bool _showDeleteorderDialog = false;
+	private bool _showDialog = false;
+	private bool _isCreated = false;
+	private bool isSuccess = true;
+	private bool _showOrderSummary = false;
+	private bool _isRegular = false;
+	private bool _hasFreeCoffee = false;
+
+
+	private Guid selectedCoffeeId;
+	private Guid selectedAddInId;
+
+
+	private string _tabFilter = "All";
+	private OrderScheme _memberPrivelege { get; set; }
+
+
+	private string _sortBy = "product";
+
+	private string _sortDirection = "ascending";
+
+	private double previousCoffeePrice = 0;
+
+	private string _orderPath = UtilityService.GetAppCoffeeOrdersFilePath();
+	private string _coffeePath = UtilityService.GetAppCoffeeFilePath();
+	private string _addInPath = UtilityService.GetAppCoffeeAddInsFilePath();
+
+
+	private Order _orderModel = new Order();
+
+
+
+	protected override void OnInitialized()
+	{
+		_order = OrderService.GetAll(_orderPath);
+		_coffeeList = CoffeeService.GetAll(_coffeePath);
+		_coffeeAddInList = AddOnService.GetAll(_addInPath);
+		_memberList = UserService.GetMembers();
+
+		foreach (var _coffeeAdd in _coffeeAddInList)
+		{
+			_selectedAddInList[_coffeeAdd.Id] = (false, _coffeeAdd);
+		}
+
+	}
+	private void MemberChangeHandler(ChangeEventArgs e)
+	{
+		_member = e.Value.ToString();
+		if (_member == "nonMember")
+		{
+			_showDialog = true;
+
+		}
+		else
+		{
+			_showDialog = false;
+
+		}
+	}
+
+	private void OnCloseDialog(bool isClosed)
+	{
+		if (isClosed)
+		{
+			_showDialog = false;
+
+		}
+		else
+		{
+			try
+			{
+
+				if (_orderModel.UserId == Guid.Empty)
+				{
+					_memberList = UserService.CreateMember(_globalState.CurrentUser.Id, _userModel.Username, _userModel.PhoneNumber);
+					if (_memberList != null)
+					{
+						isSuccess = true;
+						_member = "member";
+
+					}
+				}
+				_showDialog = false;
+
+
+
+			}
+			catch (Exception e)
+			{
+				_createErrorMessage = e.Message;
+				Console.WriteLine(e.Message);
+			}
+		}
+	}
+
+
+
+	private void OnSelectedCoffeeIdChanged(ChangeEventArgs e)
+	{
+
+		if (Guid.TryParse(e.Value?.ToString(), out var coffeeId))
+		{
+			total -= previousCoffeePrice;
+			coffeetotal = 0;
+
+			selectedCoffee = _coffeeList.FirstOrDefault(coffee => coffee.Id == coffeeId);
+
+			coffeetotal += selectedCoffee.Price;
+			total += coffeetotal;
+
+			previousCoffeePrice = selectedCoffee.Price;
+		}
+	}
+
+	private void OnSelectedAddInIdChanged(ChangeEventArgs e)
+	{
+		if (Guid.TryParse(e.Value?.ToString(), out var addInId))
+		{
+			selectedAddIn = _coffeeAddInList.FirstOrDefault(addIn => addIn.Id == addInId);
+			addintotal = selectedAddIn.Price;
+			total += addintotal;
+
+		}
+	}
+
+	private void HandleMemberChange(ChangeEventArgs e)
+	{
+		if (Guid.TryParse(e.Value?.ToString(), out Guid selectedValue))
+		{
+			_orderModel.UserId = selectedValue;
+			_memberPrivelege = OrderService.CheckPrivelege(_orderModel.UserId);
+			if (_memberPrivelege == OrderScheme.Free)
+			{
+				totalUpdated = 0;
+			}
+			if (_memberPrivelege == OrderScheme.Discount)
+			{
+
+				totalUpdated = total - (total * 0.10);
+			}
+		}
+		else
+		{
+			_orderModel.UserId = Guid.Empty;
+		}
+	}
+
+	private void OnCheckboxChange(Guid addInId, bool isChecked)
+	{
+		var addIn = _selectedAddInList[addInId].AddIn;
+		_selectedAddInList[addInId] = (isChecked, addIn);
+
+		if (isChecked)
+		{
+			selectedAddInIds.Add(addInId);
+			addintotal += addIn.Price;
+			total += addIn.Price;
+		}
+		else
+		{
+			selectedAddInIds.Remove(addInId);
+			addintotal -= addIn.Price;
+			total -= addIn.Price;
+		}
+	}
+
+
+	private void OpenEditorderDialog(Order order)
+	{
+		_dialogTitle = "Edit order Type";
+		_dialogOkLabel = "Update";
+		_orderModel = order;
+		_showAddorderDialog = true; // Reusing the add dialog for editing
+	}
+
+	private void OpenDeleteorderDialog(Order order)
+	{
+		_dialogTitle = "Delete order Type";
+
+		_dialogOkLabel = "Confirm";
+
+		_orderModel = order;
+
+		_showDeleteorderDialog = true;
+	}
+	private void OnDeleteorderDialogClose(bool isClosed)
+	{
+		if (isClosed)
+		{
+			_showDeleteorderDialog = false;
+			_orderModel = null;
+		}
+		else
+		{
+			try
+			{
+				_deleteorderErrorMessage = "";
+
+				_order = OrderService.Delete(_orderModel.Id);
+
+				_showDeleteorderDialog = false;
+
+				_orderModel = null;
+			}
+			catch (Exception e)
+			{
+				_deleteorderErrorMessage = e.Message;
+
+				Console.WriteLine(e.Message);
+			}
+		}
+	}
+
+
+
+
+	private void CreateOrder()
+	{
+		try
+		{
+			_orderProductErrorMessage = "";
+			var userId = _globalState.CurrentUser.Id;
+			double totalPrice = 0;
+			if (_memberPrivelege == OrderScheme.Free || _memberPrivelege == OrderScheme.Discount)
+			{
+				totalPrice = totalUpdated;
+			}
+			else
+			{
+				totalPrice = total;
+
+			}
+			var orderDate = DateTime.Now;
+
+			if (_orderModel.Id == Guid.Empty)
+			{
+				_order = OrderService.Create(_orderModel.UserId, userId, selectedCoffee.Id, selectedAddInIds, coffeetotal, addintotal, totalPrice, orderDate);
+			}
+			else
+			{
+				_order = OrderService.Edit(_orderModel.Id, selectedCoffee.Id, selectedAddInIds, totalPrice);
+			}
+			NavManager.NavigateTo("/orderlist");
+
+
+		}
+		catch (Exception e)
+		{
+			_orderProductErrorMessage = e.Message;
+			Console.WriteLine(e.Message);
+		}
+
+
+
+	}
+}
